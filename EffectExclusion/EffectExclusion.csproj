@@ -61,7 +61,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Lib.Harmony" Version="2.4.2" />
+		<ProjectReference Include="..\Harmony\Lib.Harmony\Lib.Harmony.csproj" AdditionalProperties="TargetFrameworks=net10.0;AssemblyName=EffectExclusion.0Harmony;GeneratePackageOnBuild=false;IsPackable=false" GlobalPropertiesToRemove="SkipPluginDeploy" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -87,7 +87,7 @@
 	</ItemGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(SkipPluginDeploy)' != 'true'">
-		<Exec Command="mkdir &quot;$(YMM4DirPath)user\plugin\$(ProjectName)&quot; &gt; NUL 2&gt;&amp;1&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;$(YMM4DirPath)user\plugin\$(ProjectName)\&quot;&#xD;&#xA;copy &quot;$(TargetDir)0Harmony.dll&quot; &quot;$(YMM4DirPath)user\plugin\$(ProjectName)\&quot;" />
+		<Exec Command="mkdir &quot;$(YMM4DirPath)user\plugin\$(ProjectName)&quot; &gt; NUL 2&gt;&amp;1&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;$(YMM4DirPath)user\plugin\$(ProjectName)\&quot;&#xD;&#xA;copy &quot;$(TargetDir)EffectExclusion.0Harmony.dll&quot; &quot;$(YMM4DirPath)user\plugin\$(ProjectName)\&quot;" />
 	</Target>
 
 </Project>
