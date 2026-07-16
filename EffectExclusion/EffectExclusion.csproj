@@ -68,13 +68,6 @@
 		<Compile Include="..\YMM4-GitHubUpdateNotifier\GitHubUpdateNotifier\*.cs" LinkBase="GitHubUpdateNotifier" />
 	</ItemGroup>
 
-	<Target Name="EnsureUpdateNotifierSources" BeforeTargets="CoreCompile">
-		<ItemGroup>
-			<_UpdateNotifierSources Include="..\YMM4-GitHubUpdateNotifier\GitHubUpdateNotifier\*.cs" />
-		</ItemGroup>
-		<Error Condition="'@(_UpdateNotifierSources)' == ''" Text="YMM4-GitHubUpdateNotifier のサブモジュールのソースが見つかりません。git submodule update --init --recursive を実行してください。" />
-	</Target>
-
 	<ItemGroup>
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
 			<_Parameter1>EffectExclusion.Tests</_Parameter1>
