@@ -1,0 +1,8 @@
+Key,Parameter,ja-jp,en-us,zh-cn,zh-tw,ko-kr,es-es,ar-sa,id-id
+EffectExclusionEffectName,,エフェクト除外,Effect Exclusion,效果排除,效果排除,이펙트 제외,Exclusión de efectos,استبعاد التأثيرات,Pengecualian Efek
+Targets,,対象,Targets,对象,對象,대상,Objetivos,الأهداف,Target
+TargetsDescription,,除外するエフェクトアイテムやグループ制御の備考欄の文字列を1行に1件ずつ入力。空欄の場合はすべて除外,"Enter the remark text of each effect item or group control to exclude, one per line. Leave empty to exclude all",每行输入一个要排除的效果对象或分组控制的备注文字。留空则排除全部,每行輸入一個要排除的效果物件或群組控制的備註文字。留空則排除全部,"제외할 이펙트 아이템이나 그룹 제어의 비고란 문자열을 한 줄에 하나씩 입력. 비워 두면 모두 제외","Introduzca el texto de observaciones de cada elemento de efecto o control de grupo a excluir, uno por línea. Dejar vacío para excluir todo",أدخل نص الملاحظات لكل عنصر تأثير أو تحكم جماعي تريد استبعاده في سطر مستقل. اتركه فارغًا لاستبعاد الكل,"Masukkan teks catatan dari setiap item efek atau kontrol grup yang akan dikecualikan, satu per baris. Kosongkan untuk mengecualikan semuanya"
+TagExclusion,,除外,Exclusion,排除,排除,제외,Exclusión,استبعاد,Pengecualian
+TagGroupControl,,グループ制御,Group Control,分组控制,群組控制,그룹 제어,Control de grupo,تحكم جماعي,Kontrol Grup
+TagEffectItem,,エフェクトアイテム,Effect Item,效果对象,效果物件,이펙트 아이템,Elemento de efecto,عنصر التأثير,Item Efek
+UpdateAvailableMessage,,新しいバージョン {0} が公開されています。,A new version {0} is available.,新版本 {0} 已发布。,新版本 {0} 已發佈。,새 버전 {0}이(가) 공개되었습니다.,La nueva versión {0} está disponible.,الإصدار الجديد {0} متاح الآن.,Versi baru {0} telah tersedia.

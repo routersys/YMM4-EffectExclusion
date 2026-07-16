@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
@@ -7,33 +7,16 @@
 		<Nullable>enable</Nullable>
 		<Version>1.0.0</Version>
 		<Platforms>AnyCPU;x64</Platforms>
+		<PlatformTarget>x64</PlatformTarget>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 		<LangVersion>latest</LangVersion>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Reference Include="AvalonDock">
-			<HintPath>$(YMM4DirPath)AvalonDock.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="NAudio">
-			<HintPath>$(YMM4DirPath)NAudio.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="NAudio.Core">
-			<HintPath>$(YMM4DirPath)NAudio.Core.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="NAudio.Midi">
-			<HintPath>$(YMM4DirPath)NAudio.Midi.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="NCalc.Core">
-			<HintPath>$(YMM4DirPath)NCalc.Core.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
 		<Reference Include="Newtonsoft.Json">
 			<HintPath>$(YMM4DirPath)Newtonsoft.Json.dll</HintPath>
+			<Private>false</Private>
 		</Reference>
 		<Reference Include="SharpGen.Runtime">
 			<HintPath>$(YMM4DirPath)SharpGen.Runtime.dll</HintPath>
@@ -55,11 +38,7 @@
 			<HintPath>$(YMM4DirPath)Vortice.DirectX.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
-		<Reference Include="Vortice.D3DCompiler.dll">
-			<HintPath>$(YMM4DirPath)Vortice.D3DCompiler.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="Vortice.DXGI.dll">
+		<Reference Include="Vortice.DXGI">
 			<HintPath>$(YMM4DirPath)Vortice.DXGI.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
@@ -82,7 +61,24 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Lib.Harmony" Version="2.4.2" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Compile Include="..\YMM4-GitHubUpdateNotifier\GitHubUpdateNotifier\*.cs" LinkBase="GitHubUpdateNotifier" />
+	</ItemGroup>
+
+	<Target Name="EnsureUpdateNotifierSources" BeforeTargets="CoreCompile">
+		<ItemGroup>
+			<_UpdateNotifierSources Include="..\YMM4-GitHubUpdateNotifier\GitHubUpdateNotifier\*.cs" />
+		</ItemGroup>
+		<Error Condition="'@(_UpdateNotifierSources)' == ''" Text="YMM4-GitHubUpdateNotifier のサブモジュールのソースが見つかりません。git submodule update --init --recursive を実行してください。" />
+	</Target>
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+			<_Parameter1>EffectExclusion.Tests</_Parameter1>
+		</AssemblyAttribute>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -90,8 +86,8 @@
 		<AdditionalFiles Include="**/*.csv" />
 	</ItemGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="mkdir &quot;$(YMM4DirPath)user\plugin\$(ProjectName)&quot; &gt; NUL 2&gt;&amp;1&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;$(YMM4DirPath)user\plugin\$(ProjectName)\&quot;" />
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(SkipPluginDeploy)' != 'true'">
+		<Exec Command="mkdir &quot;$(YMM4DirPath)user\plugin\$(ProjectName)&quot; &gt; NUL 2&gt;&amp;1&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;$(YMM4DirPath)user\plugin\$(ProjectName)\&quot;&#xD;&#xA;copy &quot;$(TargetDir)0Harmony.dll&quot; &quot;$(YMM4DirPath)user\plugin\$(ProjectName)\&quot;" />
 	</Target>
 
 </Project>
