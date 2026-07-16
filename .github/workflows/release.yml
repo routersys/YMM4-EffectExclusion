@@ -126,10 +126,25 @@ jobs:
           echo "PKG_NAME=$pkgName" >> $env:GITHUB_OUTPUT
 
       - name: GitHubリリースの作成
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ steps.version.outputs.TAG }}
-          body_path: .github/CHANGELOG.md
-          files: ${{ steps.package.outputs.PKG_NAME }}
-          draft: false
-          prerelease: false
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ steps.version.outputs.TAG }}"
+          $pkg = "${{ steps.package.outputs.PKG_NAME }}"
+          for ($attempt = 1; $attempt -le 5; $attempt++) {
+            gh release view $tag *> $null
+            if ($LASTEXITCODE -eq 0) {
+              gh release upload $tag $pkg --clobber
+            }
+            else {
+              gh release create $tag $pkg --title $tag --notes-file .github/CHANGELOG.md
+            }
+            if ($LASTEXITCODE -eq 0) {
+              exit 0
+            }
+            Write-Host "リリースの作成に失敗しました。再試行します: $attempt 回目"
+            Start-Sleep -Seconds (30 * $attempt)
+          }
+          Write-Error "リリースの作成に失敗しました。"
+          exit 1
