@@ -1,0 +1,166 @@
+name: 定期監査
+
+on:
+  schedule:
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: windows-latest
+
+    steps:
+      - name: ソースコードのチェックアウト
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: .NET SDKのセットアップ
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: YMM4最新リリースの取得と解凍
+        id: ymm4
+        shell: pwsh
+        run: |
+          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/manju-summoner/YukkuriMovieMaker4/releases/latest" `
+            -Headers @{ "User-Agent" = "EffectExclusion-CI" }
+          $asset = $release.assets | Where-Object { $_.name -like "*_Lite.zip" } | Select-Object -First 1
+          if (-not $asset) {
+            $asset = $release.assets | Where-Object { $_.name -like "*.zip" } | Select-Object -First 1
+          }
+          if (-not $asset) {
+            Write-Error "YMM4のリリースにZIPファイルが見つかりませんでした。"
+            exit 1
+          }
+          if ($asset.name -notmatch 'v(\d+(?:\.\d+)+)') {
+            Write-Error "アセット名からバージョンを取得できませんでした: $($asset.name)"
+            exit 1
+          }
+          $version = $Matches[1]
+          Write-Host "ダウンロード対象: $($asset.name)"
+          Write-Host "YMM4バージョン: $version"
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "ymm4.zip"
+          Expand-Archive -Path "ymm4.zip" -DestinationPath "ymm4_extracted" -Force
+          $ymm4Dir = (Get-ChildItem -Path "ymm4_extracted" -Recurse -Filter "YukkuriMovieMaker.dll" |
+            Select-Object -First 1).DirectoryName
+          if (-not $ymm4Dir) {
+            Write-Error "YukkuriMovieMaker.dllが見つかりませんでした。"
+            exit 1
+          }
+          echo "YMM4_DIR=$ymm4Dir\" >> $env:GITHUB_OUTPUT
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: 監査対象の判定
+        id: state
+        shell: pwsh
+        run: |
+          $data = Get-Content ".github/compatibility.json" -Raw | ConvertFrom-Json
+          $version = "${{ steps.ymm4.outputs.VERSION }}"
+          $changed = if ($data.lastTestedYmm4 -eq $version) { "false" } else { "true" }
+          Write-Host "検証済みバージョン: $($data.lastTestedYmm4)"
+          Write-Host "最新バージョン: $version"
+          Write-Host "監査の実行: $changed"
+          echo "CHANGED=$changed" >> $env:GITHUB_OUTPUT
+          echo "LAST_GOOD=$($data.lastGoodYmm4)" >> $env:GITHUB_OUTPUT
+
+      - name: resxファイルの生成
+        if: steps.state.outputs.CHANGED == 'true'
+        shell: pwsh
+        run: |
+          $proj = "EffectExclusion/EffectExclusion.csproj"
+          dotnet build "$proj" `
+            -c Release `
+            -p:YMM4DirPath="${{ steps.ymm4.outputs.YMM4_DIR }}" `
+            -p:Platform=x64 `
+            -p:SkipPluginDeploy=true
+
+      - name: プロジェクトのビルド
+        if: steps.state.outputs.CHANGED == 'true'
+        shell: pwsh
+        run: |
+          $proj = "EffectExclusion/EffectExclusion.csproj"
+          dotnet build "$proj" `
+            -c Release `
+            -p:YMM4DirPath="${{ steps.ymm4.outputs.YMM4_DIR }}" `
+            -p:Platform=x64 `
+            -p:SkipPluginDeploy=true
+
+      - name: テストプロジェクトのビルド
+        if: steps.state.outputs.CHANGED == 'true'
+        shell: pwsh
+        run: |
+          dotnet build EffectExclusion.Tests/EffectExclusion.Tests.csproj `
+            -c Release `
+            -p:YMM4DirPath="${{ steps.ymm4.outputs.YMM4_DIR }}" `
+            -p:Platform=x64 `
+            -p:SkipPluginDeploy=true `
+            -maxcpucount:1
+
+      - name: テストの実行
+        id: tests
+        if: steps.state.outputs.CHANGED == 'true'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          dotnet test EffectExclusion.Tests/EffectExclusion.Tests.csproj `
+            --no-build `
+            --no-restore `
+            -c Release `
+            -p:Platform=x64 `
+            -p:SkipPluginDeploy=true
+
+      - name: 監査結果の反映
+        if: steps.state.outputs.CHANGED == 'true'
+        shell: pwsh
+        run: |
+          $version = "${{ steps.ymm4.outputs.VERSION }}"
+          $lastGood = "${{ steps.state.outputs.LAST_GOOD }}"
+          $passed = "${{ steps.tests.outcome }}" -eq "success"
+
+          $data = Get-Content ".github/compatibility.json" -Raw | ConvertFrom-Json
+          $data.lastTestedYmm4 = $version
+          if ($passed) {
+            $data.lastGoodYmm4 = $version
+            $data.isLatestSupported = $true
+            $row = "| YukkuriMovieMaker4 | 最新版を推奨 |"
+          }
+          else {
+            $data.isLatestSupported = $false
+            $row = "| YukkuriMovieMaker4 | 〜$lastGood（$version では動作を確認できませんでした） |"
+          }
+          $json = ($data | ConvertTo-Json) + "`r`n"
+          [System.IO.File]::WriteAllText(".github/compatibility.json", $json, (New-Object System.Text.UTF8Encoding $false))
+
+          $readme = Get-Content "README.md" -Raw
+          $pattern = '(?m)^\| YukkuriMovieMaker4 \|[^\r\n]*'
+          if ($readme -notmatch $pattern) {
+            Write-Error "READMEの動作要件の行が見つかりませんでした。"
+            exit 1
+          }
+          $readme = [regex]::Replace($readme, $pattern, $row)
+          [System.IO.File]::WriteAllText("README.md", $readme, (New-Object System.Text.UTF8Encoding $false))
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/compatibility.json README.md
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "YMM4 $version の監査結果を反映"
+            git push
+          }
+
+      - name: 監査結果の確認
+        if: steps.state.outputs.CHANGED == 'true' && steps.tests.outcome != 'success'
+        shell: pwsh
+        run: |
+          Write-Error "YMM4 ${{ steps.ymm4.outputs.VERSION }} でユニットテストが失敗しました。"
+          exit 1
